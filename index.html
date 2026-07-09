@@ -106,6 +106,22 @@
     .seg button{flex:1;padding:9px 6px;font-size:12.5px;text-align:center;}
   }
   @media(max-width:520px){ .rbox .v{font-size:19px;} h1{font-size:19px;} }
+  
+  /* 생애최초 조건부 확인 모달 */
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;}
+  .modal.show{display:flex;}
+  .modal-card{background:#fff;border-radius:16px;max-width:440px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.3);padding:22px;}
+  .modal-card h3{margin:0 0 4px;font-size:17px;color:var(--ink);}
+  .modal-card .msub{font-size:12.5px;color:var(--sub);margin:0 0 14px;}
+  .modal-card .hbody{font-size:12.5px;color:#334155;line-height:1.65;}
+  .modal-card .hbody b{color:var(--cap);}
+  .modal-card ul{margin:8px 0 0;padding-left:18px;}
+  .modal-card li{margin-bottom:6px;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions button{flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:1px solid var(--line);}
+  .btn-yes{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .btn-no{background:#fff;color:var(--cap);border-color:#fed7aa;}
+  @media(max-width:520px){ .modal-actions{flex-direction:column;} }
 </style>
 </head>
 <body>
@@ -197,6 +213,11 @@
         <div class="k">필요 현금(자기자본+취득세)</div>
         <div class="v" id="rCash">–</div>
         <div class="s" id="rCashSub"></div>
+      </div>
+      <div class="rbox">
+        <div class="k">예상 월 상환액</div>
+        <div class="v" id="rMonthly">–</div>
+        <div class="s" id="rMonthlySub"></div>
       </div>
     </div>
     <div class="rconstraints" id="rConstraints"></div>
@@ -326,6 +347,26 @@
 
 </div>
 
+<!-- 생애최초 확인 모달 -->
+<div class="modal" id="firstModal">
+  <div class="modal-card">
+    <h3>✅ 생애최초, 정말 해당되나요?</h3>
+    <p class="msub">아래를 모두 만족해야 생애최초(LTV 70%)입니다. 하나라도 걸리면 '아니오'를 눌러주세요.</p>
+    <div class="hbody">
+      <ul>
+        <li><b>본인과 함께 사는 세대원 전원</b>이 태어나서 지금까지 <b>단 한 번도 집을 소유한 적 없음</b> (현재 무주택이 아니라 '생애 전 기간' 기준)</li>
+        <li><b>배우자</b>가 결혼 전에라도 과거 집(지분 포함)을 가진 적 <b>없음</b> (세대분리해도 소용 없음)</li>
+        <li>아파트뿐 아니라 <b>분양권·입주권·주거용 오피스텔</b>도 소유한 적 없음</li>
+        <li>같이 사는 부모·조부모·자녀 중 주택 소유 이력 없음 <span style="color:#0f9d58;">(상속 3개월 내 처분·만 60세↑ 부모 보유 등은 예외 가능)</span></li>
+      </ul>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-yes" id="fmYes">네, 모두 해당됩니다 (70%)</button>
+      <button class="btn-no" id="fmNo">아니오, 해당 안 됨 (40%)</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   var EOK = 100000000; // 1억(원)
@@ -365,6 +406,14 @@
     return monthlyAllowed/factor;
   }
   function monthlyPay(incomeWon){ return incomeWon*0.40/12; }
+
+  // 원리금균등 월 상환액(원)
+  function loanMonthly(principal, rate, term){
+    var i = rate/100/12;
+    var n = term*12;
+    if(i<=0) return principal/n;
+    return principal * (i*Math.pow(1+i,n))/(Math.pow(1+i,n)-1);
+  }
 
   // 취득세 추정(원)
   function acqTax(price, first, small85){
@@ -424,12 +473,14 @@
       $('rPriceSub').textContent='보유 현금으로는 가장 작은 구간도 어렵습니다';
       $('rLoan').textContent='–'; $('rLoanSub').textContent='';
       $('rCash').textContent='–'; $('rCashSub').textContent='';
+      $('rMonthly').textContent='–'; $('rMonthlySub').textContent='';
       $('rNote').textContent='보유 현금(자기자본)을 늘리거나 정책대출(신생아 특례 등)을 검토하세요.';
       $('rConstraints').innerHTML='';
       return;
     }
     var income = manToWon($('income').value);
     var rate=Number($('rate').value)||0, stress=Number($('stress').value)||0, term=Number($('term').value)||40;
+    
     // 무엇이 한도를 결정했는가
     var ltv = ltvLoan(b.price, state.first);
     var cap = priceCap(b.price);
@@ -441,6 +492,7 @@
     ];
     var minv = Math.min(ltv, (cap===Infinity?Infinity:cap), dsr);
     var binding = items.filter(function(it){return !it.na && it.v===minv;})[0].n;
+    
     $('rConstraints').innerHTML = items.map(function(it){
       var status, cls, valTxt;
       if(it.na){ status='해당 없음'; cls='na'; valTxt='없음'; }
@@ -455,6 +507,11 @@
     $('rLoanSub').textContent = '대출비중 '+Math.round(b.loan/b.price*100)+'%';
     $('rCash').textContent = fmt(b.need);
     $('rCashSub').textContent = '계약금(10%) '+fmt(b.price*0.10)+' · 취득세 약 '+fmtMan(acqTax(b.price,state.first,$('small85').checked))+' 포함';
+    
+    // 월 상환액
+    $('rMonthly').textContent = fmtMan(loanMonthly(b.loan, rate, term));
+    $('rMonthlySub').textContent = '실제금리 '+rate+'% · '+term+'년 원리금균등';
+    
     $('rNote').textContent = '이 구간의 대출 한도는 「'+binding+'」이 결정합니다. 소득이 낮아 DSR이 제약이라면 DSR 면제 정책대출(신생아 특례·디딤돌·보금자리)로 더 늘릴 수 있습니다.';
   }
 
@@ -539,16 +596,27 @@
   });
   $('small85').addEventListener('change', refresh);
 
-  // 생애최초 세그먼트
+  // 생애최초 세그먼트 + 조건부 확인 모달
   var seg = $('segFirst');
+  function setFirst(v){
+    seg.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+    var t = seg.querySelector('button[data-v="'+v+'"]'); if(t) t.classList.add('on');
+    state.first = v;
+    refresh();
+  }
+  function openFirstModal(){ $('firstModal').classList.add('show'); }
+  function closeFirstModal(){ $('firstModal').classList.remove('show'); }
+  
   seg.querySelectorAll('button').forEach(function(btn){
     btn.addEventListener('click', function(){
-      seg.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
-      btn.classList.add('on');
-      state.first = Number(btn.dataset.v);
-      refresh();
+      if(Number(btn.dataset.v)===1){ openFirstModal(); }  // 생애최초 → 확인 모달
+      else { setFirst(0); }                                // 비생애최초 → 즉시 적용
     });
   });
+  
+  $('fmYes').addEventListener('click', function(){ setFirst(1); closeFirstModal(); });
+  $('fmNo').addEventListener('click', function(){ setFirst(0); closeFirstModal(); });
+  $('firstModal').addEventListener('click', function(e){ if(e.target===this) closeFirstModal(); });
 
   var segR = $('segRegion');
   segR.querySelectorAll('button').forEach(function(btn){
