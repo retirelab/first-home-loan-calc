@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>생애최초 주택구입 대출 한도 계산기 (2026.7 기준)</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1b2430; --sub:#5b6b7c;
+    --line:#e3e8ef; --brand:#2563eb; --brand-d:#1d4ed8; --brand-l:#eff4ff;
+    --good:#0f9d58; --warn:#e8590c; --warn-bg:#fff4ec; --cap:#c2410c;
+    --first:#eef6ff; --normal:#fafbfc; --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:920px;margin:0 auto;padding:20px 16px 64px;}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em;}
+  .date{color:var(--sub);font-size:13px;margin:0 0 14px;}
+  .banner{background:var(--warn-bg);border:1px solid #ffd9be;color:#9a3412;
+    border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:18px;}
+  .banner b{color:#7c2d12;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .card h2{font-size:16px;margin:0 0 4px;letter-spacing:-.01em;}
+  .card .hint{color:var(--sub);font-size:12.5px;margin:0 0 14px;}
+  /* inputs */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;}
+  .field label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:5px;font-weight:600;}
+  .field input[type=number], .field select{width:100%;padding:9px 11px;border:1px solid var(--line);
+    border-radius:9px;font-size:15px;background:#fff;color:var(--ink);}
+  .field .u{font-size:11.5px;color:var(--sub);margin-top:3px;}
+  .seg{display:inline-flex;background:#eef1f5;border-radius:10px;padding:3px;gap:2px;}
+  .seg button{border:0;background:transparent;padding:8px 14px;border-radius:8px;font-size:13.5px;
+    cursor:pointer;color:var(--sub);font-weight:600;}
+  .seg button.on{background:#fff;color:var(--brand-d);box-shadow:var(--shadow);}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub);margin-top:8px;}
+  /* result */
+  .result{background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;border:0;}
+  .result h2{color:#fff;}
+  .result .hint{color:#c7d7fe;}
+  .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px;}
+  .rbox{background:rgba(255,255,255,.12);border-radius:11px;padding:14px;}
+  .rbox .k{font-size:12px;color:#dbe6ff;margin-bottom:6px;}
+  .rbox .v{font-size:22px;font-weight:800;letter-spacing:-.02em;}
+  .rbox .s{font-size:11.5px;color:#c7d7fe;margin-top:4px;}
+  .rnote{font-size:12px;color:#dbe6ff;margin-top:12px;}
+  .binding{display:inline-block;font-size:11px;background:rgba(255,255,255,.2);
+    border-radius:6px;padding:2px 7px;margin-left:6px;vertical-align:middle;}
+  /* tables */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .tabs button{border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:9px;
+    font-size:13.5px;cursor:pointer;color:var(--sub);font-weight:600;}
+  .tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;}
+  th{color:var(--sub);font-weight:600;font-size:12px;text-align:right;background:#fafbfc;position:sticky;top:0;}
+  th:first-child,td:first-child{text-align:left;}
+  .tblscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  tr.grp{cursor:pointer;}
+  tr.grp:hover{background:#f6f9ff;}
+  tr.grp td:first-child::before{content:"▸";display:inline-block;margin-right:7px;color:var(--brand);
+    transition:transform .15s;font-size:11px;}
+  tr.grp.open td:first-child::before{transform:rotate(90deg);}
+  tr.sub{background:#fcfdff;font-size:12.5px;color:#425064;display:none;}
+  tr.sub.show{display:table-row;}
+  tr.sub td:first-child{padding-left:26px;color:var(--sub);}
+  td.first{background:var(--first);font-weight:700;color:var(--brand-d);}
+  td.cap{color:var(--cap);font-weight:700;}
+  td.deposit{color:#b45309;font-weight:600;}
+  .rconstraints{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .cchip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);
+    border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:7px 11px;font-size:12px;color:#eaf1ff;}
+  .cchip .cv{font-weight:700;color:#fff;}
+  .cchip .st{font-size:10.5px;font-weight:700;border-radius:5px;padding:2px 6px;}
+  .cchip .st.bind{background:#fecaca;color:#7f1d1d;}
+  .cchip .st.pass{background:rgba(255,255,255,.22);color:#dff3e6;}
+  .cchip .st.na{background:rgba(255,255,255,.15);color:#c7d7fe;}
+  .capflag{font-size:10px;background:var(--warn-bg);color:var(--cap);border-radius:5px;padding:1px 5px;margin-left:5px;}
+  .legend{font-size:11.5px;color:var(--sub);margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:middle;margin-right:5px;}
+  /* policy cards */
+  .pol{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+  .polc{border:1px solid var(--line);border-radius:12px;padding:15px;}
+  .polc.hi{border-color:#bfdbfe;background:var(--brand-l);}
+  .polc h3{font-size:14.5px;margin:0 0 3px;}
+  .polc .tag{font-size:11px;font-weight:700;color:var(--good);}
+  .polc.hi .tag{color:var(--brand-d);}
+  .polc dl{margin:10px 0 0;font-size:12.5px;}
+  .polc dl div{display:flex;justify-content:space-between;padding:4px 0;border-top:1px dashed var(--line);}
+  .polc dt{color:var(--sub);}
+  .polc dd{margin:0;font-weight:600;text-align:right;}
+  .foot{font-size:11.5px;color:var(--sub);margin-top:22px;}
+  .foot a{color:var(--brand);text-decoration:none;}
+  .foot h4{font-size:12.5px;margin:16px 0 6px;color:var(--ink);}
+  details.note{margin-top:12px;font-size:12.5px;color:var(--sub);}
+  details.note summary{cursor:pointer;color:var(--brand);font-weight:600;}
+  details.note p{margin:8px 0 0;line-height:1.6;}
+  .toggles{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:16px;}
+  .tgl{flex:1;min-width:240px;}
+  @media(max-width:520px){
+    .toggles{gap:14px;}
+    .tgl{min-width:100%;}
+    .seg{display:flex;width:100%;}
+    .seg button{flex:1;padding:9px 6px;font-size:12.5px;text-align:center;}
+  }
+  @media(max-width:520px){ .rbox .v{font-size:19px;} h1{font-size:19px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>생애최초 주택구입 대출 한도 계산기</h1>
+  <p class="date">서울·수도권 규제지역 기준 · 2026년 7월 규제 반영 · 정보 제공용(실행 전 은행 확인 필수)</p>
+
+  <div class="banner">
+    <b>2025년 두 차례 대책으로 규제가 크게 바뀌었습니다.</b> ① 서울 전역 25개 구 + 경기 12곳이 규제지역(투기과열·조정)입니다. ② 규제지역 주택구입 주담대는 <b>총액 6억 원 상한</b>(집값 15억↑ 4억, 25억↑ 2억)에 걸립니다. ③ 생애최초 LTV는 규제지역 <b>70%</b>(전입의무 6개월). 이 계산기는 이 3가지를 모두 반영합니다.
+  </div>
+
+  <!-- 공통 입력 -->
+  <div class="card">
+    <h2>① 내 조건 입력</h2>
+    <p class="hint">값을 바꾸면 아래 결론과 테이블이 실시간으로 갱신됩니다. 규제지역(서울 전역) 기준입니다.</p>
+    
+    <div class="toggles">
+      <div class="tgl">
+        <div class="field" style="margin-bottom:6px;"><label>지역 구분</label></div>
+        <div class="seg" id="segRegion">
+          <button data-r="reg" class="on">규제지역 (서울·수도권)</button>
+          <button data-r="non">비규제지역 (지방)</button>
+        </div>
+      </div>
+      <div class="tgl">
+        <div class="field" style="margin-bottom:6px;"><label>주택 보유 이력</label></div>
+        <div class="seg" id="segFirst">
+          <button data-v="1" class="on" id="btnFirst">생애최초</button>
+          <button data-v="0" id="btnNormal">비생애최초 무주택</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="field">
+        <label>부부합산 연소득</label>
+        <input type="number" id="income" value="9000" min="0" step="500">
+        <div class="u">만원 · 예: 9,000 = 9천만원</div>
+      </div>
+      <div class="field">
+        <label>보유 현금(자기자본)</label>
+        <input type="number" id="cash" value="30000" min="0" step="1000">
+        <div class="u">만원 · 전세보증금 회수액 포함</div>
+      </div>
+      <div class="field">
+        <label>주담대 금리</label>
+        <input type="number" id="rate" value="4.5" min="0" step="0.1">
+        <div class="u">% · 연이율</div>
+      </div>
+      <div class="field">
+        <label>상환 기간</label>
+        <select id="term">
+          <option value="40" selected>40년</option>
+          <option value="30">30년</option>
+          <option value="20">20년</option>
+        </select>
+        <div class="u">원리금균등 상환 가정</div>
+      </div>
+      <div class="field">
+        <label>스트레스 가산금리</label>
+        <select id="stress">
+          <option value="1.5" selected>수도권 1.5%p (3단계)</option>
+          <option value="0.75">지방 0.75%p</option>
+          <option value="0">미적용(참고용)</option>
+        </select>
+        <div class="u">DSR 한도 계산 시 가산</div>
+      </div>
+    </div>
+    <div class="chk"><input type="checkbox" id="small85" checked> 전용면적 85㎡ 이하 (농특세 비과세 · 취득세 추정에 반영)</div>
+  </div>
+
+  <!-- 결론 -->
+  <div class="card result">
+    <h2>② 내가 살 수 있는 최대 아파트</h2>
+    <p class="hint">LTV·6억 상한·DSR·보유현금을 모두 교차해 자동 계산한 결과입니다.</p>
+    <div class="rgrid">
+      <div class="rbox">
+        <div class="k">최대 구입 가능 아파트</div>
+        <div class="v" id="rPrice">–</div>
+        <div class="s" id="rPriceSub"></div>
+      </div>
+      <div class="rbox">
+        <div class="k">이때 최대 대출</div>
+        <div class="v" id="rLoan">–</div>
+        <div class="s" id="rLoanSub"></div>
+      </div>
+      <div class="rbox">
+        <div class="k">필요 현금(자기자본+취득세)</div>
+        <div class="v" id="rCash">–</div>
+        <div class="s" id="rCashSub"></div>
+      </div>
+    </div>
+    <div class="rconstraints" id="rConstraints"></div>
+    <div class="rnote" id="rNote"></div>
+  </div>
+
+  <!-- 테이블 -->
+  <div class="card">
+    <div class="tabs">
+      <button data-tab="ltv" class="on">집값별 대출 한도(LTV)</button>
+      <button data-tab="dsr">연봉별 대출 한도(DSR)</button>
+      <button data-tab="policy">정책대출 비교</button>
+    </div>
+
+    <!-- LTV -->
+    <div id="tab-ltv">
+      <h2 style="font-size:15px;margin:2px 0 4px;">집값별 LTV 대출 한도</h2>
+      <p class="hint">1억 단위 행을 클릭하면 1,000만 원 단위로 펼쳐집니다. <b>계약금(10%)</b>은 계약 시 즉시 본인 현금으로 내야 하는 금액입니다(대출 실행 전). <b>붉은 값</b>은 6억(또는 4·2억) 상한에 걸려 LTV보다 대출이 줄어든 구간입니다.</p>
+      <div class="tblscroll">
+        <table>
+          <thead><tr>
+            <th>집값</th>
+            <th>계약금(10%)</th>
+            <th id="thFirst">생애최초 70%</th>
+            <th id="thNormal">비생애최초 40%</th>
+            <th>적용 상한</th>
+            <th>내 조건 실제 가능액</th>
+          </tr></thead>
+          <tbody id="ltvBody"></tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--first)"></i>생애최초(선택 시 하이라이트)</span>
+        <span><i style="background:var(--warn-bg)"></i>6억 상한에 걸린 구간</span>
+      </div>
+    </div>
+
+    <!-- DSR -->
+    <div id="tab-dsr" style="display:none;">
+      <h2 style="font-size:15px;margin:2px 0 4px;">부부합산 연봉별 DSR 최대 대출</h2>
+      <p class="hint">DSR 40% + 스트레스 가산금리 반영. 다른 대출(신용·자동차 등)이 없다고 가정한 값입니다. 상단 입력의 금리·기간·스트레스 설정을 따릅니다.</p>
+      <div class="tblscroll">
+        <table>
+          <thead><tr>
+            <th>부부합산 연봉</th>
+            <th>월 상환여력</th>
+            <th>DSR 최대 대출</th>
+            <th>6억 상한 적용 후</th>
+            <th>연봉 대비 배수</th>
+          </tr></thead>
+          <tbody id="dsrBody"></tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:10px;" id="dsrParam"></p>
+    </div>
+
+    <!-- Policy -->
+    <div id="tab-policy" style="display:none;">
+      <h2 style="font-size:15px;margin:2px 0 4px;">정책대출 vs 일반 주담대</h2>
+      <p class="hint">정책대출은 대체로 <b>DSR 규제를 적용받지 않아</b> 소득이 낮은 가구에 유리합니다. 신혼·출산 가구라면 신생아 특례가 가장 강력합니다. (2026.7 기준, 세부 요건은 실행 전 확인)</p>
+      <div class="pol">
+        <div class="polc hi">
+          <span class="tag">★ 신혼·출산 최우선</span>
+          <h3>신생아 특례 디딤돌</h3>
+          <dl>
+            <div><dt>소득요건</dt><dd>부부 2억 이하(맞벌이)</dd></div>
+            <div><dt>대상주택</dt><dd>9억 이하·85㎡ 이하</dd></div>
+            <div><dt>한도</dt><dd>최대 5억</dd></div>
+            <div><dt>금리</dt><dd>연 1.3~4.3%</dd></div>
+            <div><dt>DSR</dt><dd>미적용</dd></div>
+          </dl>
+        </div>
+        <div class="polc">
+          <span class="tag">무주택 신혼</span>
+          <h3>디딤돌 (신혼)</h3>
+          <dl>
+            <div><dt>소득요건</dt><dd>부부 8,500 이하</dd></div>
+            <div><dt>대상주택</dt><dd>5~6억 이하·85㎡</dd></div>
+            <div><dt>한도</dt><dd>신혼 3.2억</dd></div>
+            <div><dt>금리우대</dt><dd>신혼 △0.2%p</dd></div>
+            <div><dt>DSR</dt><dd>미적용</dd></div>
+          </dl>
+        </div>
+        <div class="polc">
+          <span class="tag">생애최초 우대</span>
+          <h3>보금자리론</h3>
+          <dl>
+            <div><dt>소득요건</dt><dd>7천(신혼 8.5천)</dd></div>
+            <div><dt>대상주택</dt><dd>6억 이하</dd></div>
+            <div><dt>한도</dt><dd>3.6억(생초 4.2억)</dd></div>
+            <div><dt>금리</dt><dd>고정 특례금리</dd></div>
+            <div><dt>DSR</dt><dd>미적용(DTI 적용)</dd></div>
+          </dl>
+        </div>
+        <div class="polc">
+          <span class="tag">일반 은행</span>
+          <h3>일반 주택담보대출</h3>
+          <dl>
+            <div><dt>소득요건</dt><dd>없음</dd></div>
+            <div><dt>대상주택</dt><dd>제한 없음</dd></div>
+            <div><dt>한도</dt><dd>6억 상한 + LTV</dd></div>
+            <div><dt>LTV</dt><dd>생초 70/일반 40%</dd></div>
+            <div><dt>DSR</dt><dd>40% 적용(스트레스)</dd></div>
+          </dl>
+        </div>
+      </div>
+      <details class="note">
+        <summary>정책대출을 언제 쓰는 게 유리한가?</summary>
+        <p>소득이 낮아 DSR 40%에 먼저 걸리는 가구는 DSR을 적용받지 않는 정책대출이 오히려 대출이 더 많이 나올 수 있습니다. 반대로 소득이 높고 집값이 정책대출 대상가(6~9억)를 넘는다면 일반 주담대(6억 상한)를 쓰게 됩니다. 신생아 특례는 부부합산 2억(맞벌이)까지 대상이 넓고 한도 5억·DSR 면제라 신혼·출산 가구에는 사실상 최우선 카드입니다. 다만 대상주택 가격·면적 요건(9억·85㎡ 등)이 있어 서울 인기 단지는 대상에서 빠질 수 있습니다.</p>
+      </details>
+    </div>
+  </div>
+
+  <div class="foot">
+    <h4>계산 기준 및 가정</h4>
+    규제지역(서울 전역) 기준. 실제 대출 = min(LTV×집값, 집값별 상한, DSR 한도)로 계산합니다. 취득세는 표준세율(6억 이하 1%, 6~9억 1~3% 비례, 9억 초과 3%) + 지방교육세 개략 + 생애최초 감면(12억 이하 최대 200만원)을 반영한 <b>추정치</b>이며, 다주택·조정지역 중과, 부가비용(중개·등기)은 제외했습니다. DSR은 다른 대출이 없다고 가정합니다. 개별 상황·은행별 심사에 따라 결과가 달라질 수 있습니다.
+    <h4>출처 (2026.7 확인)</h4>
+    · <a href="https://ko.wikipedia.org/wiki/6%C2%B727_%EB%B6%80%EB%8F%99%EC%82%B0_%EB%8C%80%EC%B1%85" target="_blank">6·27 부동산 대책 (주담대 6억 상한·생애최초 LTV 70%)</a><br>
+    · <a href="https://www.korea.kr/news/policyNewsView.do?newsId=148950973" target="_blank">서울 전역·경기 12곳 투기과열지구 지정 (정책브리핑)</a><br>
+    · <a href="https://www.korea.kr/news/policyNewsView.do?newsId=148950959" target="_blank">집값별 대출한도 차등(15억 6억/25억 4억/초과 2억)</a><br>
+    · <a href="https://www.fsc.go.kr/no010101/84617" target="_blank">스트레스 DSR 3단계 시행방안 (금융위)</a><br>
+    · <a href="https://www.myhome.go.kr/hws/portal/cont/selectBabySpecialCaseStepStoneLoneView.do" target="_blank">신생아 특례 디딤돌대출 (주택도시기금)</a><br>
+    · <a href="https://www.hf.go.kr/ko/sub01/sub01_01_01.do" target="_blank">보금자리론 상품소개 (주택금융공사)</a><br>
+    · <a href="https://www.banksalad.com/articles/25%EB%85%84-%EC%83%9D%EC%95%A0%EC%B5%9C%EC%B4%88-%EC%A3%BC%ED%83%9D-%EC%B7%A8%EB%93%9D%EC%84%B8-%EA%B0%90%EB%A9%B4-%ED%98%9C%ED%83%9D-%EC%B4%9D%EC%A0%95%EB%A6%AC" target="_blank">2026 생애최초 취득세 감면 (소득요건 폐지)</a>
+    <p style="margin-top:14px;">⚠️ 본 계산기는 정보 제공용 참고 자료이며 대출 승인·금액을 보장하지 않습니다. 실행 전 반드시 은행 및 관할 구청(취득세)에서 확인하세요.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var EOK = 100000000; // 1억(원)
+  var MAN = 10000;     // 1만(원)
+  // 입력 만원단위 → 원
+  function manToWon(v){ return (Number(v)||0) * MAN; }
+
+  var state = { first:1, region:'reg' };
+
+  function $(id){ return document.getElementById(id); }
+
+  // 집값별 상한(원)
+  function priceCap(price){
+    if(state.region==='non') return Infinity;
+    if(price <= 15*EOK) return 6*EOK;
+    if(price <= 25*EOK) return 4*EOK;
+    return 2*EOK;
+  }
+  
+  function ltvRate(first){
+    if(state.region==='non') return first? 0.80 : 0.70; // 비규제(지방)
+    return first? 0.70 : 0.40;                          // 규제지역
+  }
+  function ltvLoan(price, first){ return price * ltvRate(first); }
+  
+  // 규제지역 일반 주담대 실제 최대(상한 적용, DSR 제외)
+  function regLoan(price, first){ return Math.min(ltvLoan(price,first), priceCap(price)); }
+
+  // DSR 최대 대출(원): 소득(원), 금리+스트레스, 만기
+  function dsrLoan(incomeWon, rate, stress, term){
+    var i = (rate+stress)/100/12;
+    var n = term*12;
+    var annualAllowed = incomeWon * 0.40;
+    var monthlyAllowed = annualAllowed/12;
+    if(i<=0) return monthlyAllowed*n;
+    var factor = i*Math.pow(1+i,n)/(Math.pow(1+i,n)-1); // 월상환/원금
+    return monthlyAllowed/factor;
+  }
+  function monthlyPay(incomeWon){ return incomeWon*0.40/12; }
+
+  // 취득세 추정(원)
+  function acqTax(price, first, small85){
+    var ratePct;
+    if(price <= 6*EOK) ratePct = 1.0;
+    else if(price <= 9*EOK) ratePct = (price/EOK)*2/3 - 3; // 1~3%
+    else ratePct = 3.0;
+    var base = price*ratePct/100;
+    var edu = base*0.1;                 // 지방교육세 개략
+    var nong = small85 ? 0 : price*0.002; // 농특세(85㎡초과 0.2%)
+    var total = base+edu+nong;
+    if(first && price <= 12*EOK) total = Math.max(0, total - Math.min(2000000, base));
+    return total;
+  }
+
+  // 원 → "6억 3,000만원" 문자열
+  function fmt(won){
+    if(won==null||isNaN(won)) return '–';
+    if(!isFinite(won)) return '없음';
+    won = Math.round(won/MAN)*MAN; // 만원 반올림
+    var eok = Math.floor(won/EOK);
+    var man = Math.round((won - eok*EOK)/MAN);
+    var s='';
+    if(eok>0) s += eok+'억';
+    if(man>0) s += (eok>0?' ':'') + man.toLocaleString()+'만';
+    if(!s) s='0';
+    return s+'원';
+  }
+  function fmtMan(won){ return Math.round(won/MAN).toLocaleString()+'만원'; }
+
+  // ---- 결론 계산 ----
+  function computeConclusion(){
+    var income = manToWon($('income').value);
+    var cash   = manToWon($('cash').value);
+    var rate   = Number($('rate').value)||0;
+    var stress = Number($('stress').value)||0;
+    var term   = Number($('term').value)||40;
+    var small  = $('small85').checked;
+    var first  = state.first;
+
+    var best=null;
+    // 1000만원 단위로 스캔 (0.1억 ~ 15억)
+    for(var p=1000*MAN; p<=15*EOK; p+=1000*MAN){
+      var loan = Math.min(regLoan(p,first), dsrLoan(income,rate,stress,term));
+      var need = (p - loan) + acqTax(p,first,small);
+      if(need <= cash){
+        best = { price:p, loan:loan, need:need };
+      } else break;
+    }
+    return best;
+  }
+
+  function renderConclusion(){
+    var b = computeConclusion();
+    if(!b){
+      $('rPrice').textContent='–';
+      $('rPriceSub').textContent='보유 현금으로는 가장 작은 구간도 어렵습니다';
+      $('rLoan').textContent='–'; $('rLoanSub').textContent='';
+      $('rCash').textContent='–'; $('rCashSub').textContent='';
+      $('rNote').textContent='보유 현금(자기자본)을 늘리거나 정책대출(신생아 특례 등)을 검토하세요.';
+      $('rConstraints').innerHTML='';
+      return;
+    }
+    var income = manToWon($('income').value);
+    var rate=Number($('rate').value)||0, stress=Number($('stress').value)||0, term=Number($('term').value)||40;
+    // 무엇이 한도를 결정했는가
+    var ltv = ltvLoan(b.price, state.first);
+    var cap = priceCap(b.price);
+    var dsr = dsrLoan(income,rate,stress,term);
+    var items = [
+      {n:'LTV '+Math.round(ltvRate(state.first)*100)+'%', v:ltv, na:false},
+      {n:'집값별 상한', v:cap, na:(cap===Infinity)},
+      {n:'DSR 40%', v:dsr, na:false}
+    ];
+    var minv = Math.min(ltv, (cap===Infinity?Infinity:cap), dsr);
+    var binding = items.filter(function(it){return !it.na && it.v===minv;})[0].n;
+    $('rConstraints').innerHTML = items.map(function(it){
+      var status, cls, valTxt;
+      if(it.na){ status='해당 없음'; cls='na'; valTxt='없음'; }
+      else if(it.v===minv){ status='제약'; cls='bind'; valTxt=fmt(it.v); }
+      else { status='통과'; cls='pass'; valTxt=fmt(it.v); }
+      return '<div class="cchip"><span>'+it.n+'</span><span class="cv">'+valTxt+'</span><span class="st '+cls+'">'+status+'</span></div>';
+    }).join('');
+
+    $('rPrice').textContent = fmt(b.price);
+    $('rPriceSub').textContent = state.first? '생애최초 기준' : '비생애최초 무주택 기준';
+    $('rLoan').innerHTML = fmt(b.loan) + '<span class="binding">'+binding+' 제약</span>';
+    $('rLoanSub').textContent = '대출비중 '+Math.round(b.loan/b.price*100)+'%';
+    $('rCash').textContent = fmt(b.need);
+    $('rCashSub').textContent = '계약금(10%) '+fmt(b.price*0.10)+' · 취득세 약 '+fmtMan(acqTax(b.price,state.first,$('small85').checked))+' 포함';
+    $('rNote').textContent = '이 구간의 대출 한도는 「'+binding+'」이 결정합니다. 소득이 낮아 DSR이 제약이라면 DSR 면제 정책대출(신생아 특례·디딤돌·보금자리)로 더 늘릴 수 있습니다.';
+  }
+
+  // ---- LTV 테이블 ----
+  function ltvRow(price, isSub){
+    var income = manToWon($('income').value);
+    var rate=Number($('rate').value)||0, stress=Number($('stress').value)||0, term=Number($('term').value)||40;
+    var l70 = ltvLoan(price,true), l40 = ltvLoan(price,false);
+    var cap = priceCap(price);
+    var reg = regLoan(price, state.first);
+    var actual = Math.min(reg, dsrLoan(income,rate,stress,term));
+    var capped70 = l70>cap, capped40 = l40>cap;
+    var firstCls = state.first? 'first':'';
+    var c70 = state.first? (capped70?'cap':'first') : (capped70?'cap':'');
+    var c40 = !state.first? (capped40?'cap':'first') : (capped40?'cap':'');
+    return '<td>'+fmt(price)+'</td>'+
+      '<td class="deposit">'+fmt(price*0.10)+'</td>'+
+      '<td class="'+c70+'">'+fmt(Math.min(l70,cap))+(capped70?'<span class="capflag">상한</span>':'')+'</td>'+
+      '<td class="'+c40+'">'+fmt(Math.min(l40,cap))+(capped40?'<span class="capflag">상한</span>':'')+'</td>'+
+      '<td>'+(cap===Infinity?'없음':fmt(cap))+'</td>'+
+      '<td style="font-weight:700;color:var(--brand-d)">'+fmt(actual)+'</td>';
+  }
+
+  function buildLtv(){
+    var body = $('ltvBody'); body.innerHTML='';
+    document.getElementById('thFirst').textContent = '생애최초 '+Math.round(ltvRate(true)*100)+'%';
+    document.getElementById('thNormal').textContent = '비생애최초 '+Math.round(ltvRate(false)*100)+'%';
+    document.getElementById('btnFirst').textContent = '생애최초 (LTV '+Math.round(ltvRate(true)*100)+'%)';
+    document.getElementById('btnNormal').textContent = '비생애최초 무주택 (LTV '+Math.round(ltvRate(false)*100)+'%)';
+    for(var eok=1; eok<=15; eok++){
+      var price = eok*EOK;
+      var tr = document.createElement('tr');
+      tr.className='grp'; tr.dataset.eok=eok;
+      tr.innerHTML = ltvRow(price,false);
+      body.appendChild(tr);
+      // sub rows: eok.1 ~ eok.9 (억 + 1000만*k)
+      for(var k=1;k<=9;k++){
+        var sp = eok*EOK + k*1000*MAN;
+        if(sp>15*EOK) break;
+        var sub = document.createElement('tr');
+        sub.className='sub'; sub.dataset.parent=eok;
+        sub.innerHTML = ltvRow(sp,true);
+        body.appendChild(sub);
+      }
+      tr.addEventListener('click', (function(e){ return function(){
+        var open = e.classList.toggle('open');
+        var subs = body.querySelectorAll('tr.sub[data-parent="'+e.dataset.eok+'"]');
+        subs.forEach(function(s){ s.classList.toggle('show', open); });
+      };})(tr));
+    }
+  }
+
+  // ---- DSR 테이블 ----
+  function buildDsr(){
+    var body=$('dsrBody'); body.innerHTML='';
+    var rate=Number($('rate').value)||0, stress=Number($('stress').value)||0, term=Number($('term').value)||40;
+    for(var man=3000; man<=20000; man+=1000){ // 3천만 ~ 2억, 1000만 단위
+      var incomeWon = man*MAN;
+      var loan = dsrLoan(incomeWon,rate,stress,term);
+      var noCap = (state.region==='non');
+      var capped = noCap? loan : Math.min(loan, 6*EOK);
+      var over = (!noCap && loan>6*EOK);
+      var mult = (loan/incomeWon).toFixed(1);
+      var tr=document.createElement('tr');
+      tr.innerHTML =
+        '<td>'+man.toLocaleString()+'만원</td>'+
+        '<td>'+fmtMan(monthlyPay(incomeWon))+'</td>'+
+        '<td>'+fmt(loan)+'</td>'+
+        '<td class="'+(over?'cap':'')+'">'+(noCap?'—':fmt(capped)+(over?'<span class="capflag">6억</span>':''))+'</td>'+
+        '<td>'+mult+'배</td>';
+      body.appendChild(tr);
+    }
+    $('dsrParam').textContent = '적용: 금리 '+rate+'% + 스트레스 '+stress+'%p = 산정금리 '+(rate+stress)+'% · '+term+'년 원리금균등 · DSR 40%';
+  }
+
+  // ---- 이벤트 ----
+  function refresh(){ renderConclusion(); buildLtv(); buildDsr(); }
+
+  ['income','cash','rate','term','stress'].forEach(function(id){
+    $(id).addEventListener('input', refresh);
+    $(id).addEventListener('change', refresh);
+  });
+  $('small85').addEventListener('change', refresh);
+
+  // 생애최초 세그먼트
+  var seg = $('segFirst');
+  seg.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      seg.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      state.first = Number(btn.dataset.v);
+      refresh();
+    });
+  });
+
+  var segR = $('segRegion');
+  segR.querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      segR.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      state.region = btn.dataset.r;
+      $('stress').value = (state.region==='non') ? '0.75' : '1.5'; // 지방 스트레스 자동
+      refresh();
+    });
+  });
+
+  // 탭
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.tabs button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      ['ltv','dsr','policy'].forEach(function(t){ $('tab-'+t).style.display = (t===b.dataset.tab)?'block':'none'; });
+    });
+  });
+
+  refresh();
+})();
+</script>
+</body>
+</html>
