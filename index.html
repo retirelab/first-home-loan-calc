@@ -107,7 +107,6 @@
   }
   @media(max-width:520px){ .rbox .v{font-size:19px;} h1{font-size:19px;} }
   
-  /* 생애최초 조건부 확인 모달 */
   .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;}
   .modal.show{display:flex;}
   .modal-card{background:#fff;border-radius:16px;max-width:440px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.3);padding:22px;}
@@ -190,8 +189,19 @@
         </select>
         <div class="u">DSR 한도 계산 시 가산</div>
       </div>
+      <div class="field">
+        <label>방공제 지역</label>
+        <select id="bangRegion">
+          <option value="55000000" selected>서울 (5,500만)</option>
+          <option value="48000000">과밀억제권역 (4,800만)</option>
+          <option value="28000000">광역시 (2,800만)</option>
+          <option value="25000000">기타 지역 (2,500만)</option>
+        </select>
+        <div class="u">소액임차보증금 최우선변제금</div>
+      </div>
     </div>
     <div class="chk"><input type="checkbox" id="small85" checked> 전용면적 85㎡ 이하 (농특세 비과세 · 취득세 추정에 반영)</div>
+    <div class="chk"><input type="checkbox" id="mci"> MCI/MCG 가입 (방공제 면제 · LTV 전액) — <b style="color:var(--cap)">미체크 시 방공제 차감(기본)</b></div>
   </div>
 
   <!-- 결론 -->
@@ -235,7 +245,7 @@
     <!-- LTV -->
     <div id="tab-ltv">
       <h2 style="font-size:15px;margin:2px 0 4px;">집값별 LTV 대출 한도</h2>
-      <p class="hint">1억 단위 행을 클릭하면 1,000만 원 단위로 펼쳐집니다. <b>계약금(10%)</b>은 계약 시 즉시 본인 현금으로 내야 하는 금액입니다(대출 실행 전). <b>붉은 값</b>은 6억(또는 4·2억) 상한에 걸려 LTV보다 대출이 줄어든 구간입니다.</p>
+      <p class="hint">1억 단위 행을 클릭하면 1,000만 원 단위로 펼쳐집니다. <b>계약금(10%)</b>은 계약 시 즉시 본인 현금으로 내야 하는 금액입니다(대출 실행 전). <b>붉은 값</b>은 6억(또는 4·2억) 상한에 걸려 LTV보다 대출이 줄어든 구간입니다. 맨 오른쪽 <b>실제 가능액</b>은 DSR·방공제(MCI/MCG 미가입 시)까지 반영한 값입니다.</p>
       <div class="tblscroll">
         <table>
           <thead><tr>
@@ -391,9 +401,14 @@
     return first? 0.70 : 0.40;                          // 규제지역
   }
   function ltvLoan(price, first){ return price * ltvRate(first); }
-  
-  // 규제지역 일반 주담대 실제 최대(상한 적용, DSR 제외)
-  function regLoan(price, first){ return Math.min(ltvLoan(price,first), priceCap(price)); }
+
+  // 방공제(소액임차보증금 최우선변제금) — MCI/MCG 가입 시 면제
+  function bangongje(){ return $('mci').checked ? 0 : (Number($('bangRegion').value)||0); }
+  // 규제지역 일반 주담대 실제 최대(방공제 차감 → 상한 적용, DSR 제외)
+  function regLoan(price, first){
+    var secured = Math.max(0, ltvLoan(price,first) - bangongje());
+    return Math.min(secured, priceCap(price));
+  }
 
   // DSR 최대 대출(원): 소득(원), 금리+스트레스, 만기
   function dsrLoan(incomeWon, rate, stress, term){
@@ -482,7 +497,7 @@
     var rate=Number($('rate').value)||0, stress=Number($('stress').value)||0, term=Number($('term').value)||40;
     
     // 무엇이 한도를 결정했는가
-    var ltv = ltvLoan(b.price, state.first);
+    var ltv = Math.max(0, ltvLoan(b.price, state.first) - bangongje());
     var cap = priceCap(b.price);
     var dsr = dsrLoan(income,rate,stress,term);
     var items = [
@@ -504,7 +519,7 @@
     $('rPrice').textContent = fmt(b.price);
     $('rPriceSub').textContent = state.first? '생애최초 기준' : '비생애최초 무주택 기준';
     $('rLoan').innerHTML = fmt(b.loan) + '<span class="binding">'+binding+' 제약</span>';
-    $('rLoanSub').textContent = '대출비중 '+Math.round(b.loan/b.price*100)+'%';
+    $('rLoanSub').textContent = '대출비중 '+Math.round(b.loan/b.price*100)+'%' + (bangongje()>0 ? ' · 방공제 '+fmtMan(bangongje())+' 차감' : ' · MCI/MCG 방공제 면제');
     $('rCash').textContent = fmt(b.need);
     $('rCashSub').textContent = '계약금(10%) '+fmt(b.price*0.10)+' · 취득세 약 '+fmtMan(acqTax(b.price,state.first,$('small85').checked))+' 포함';
     
@@ -523,14 +538,14 @@
     var cap = priceCap(price);
     var reg = regLoan(price, state.first);
     var actual = Math.min(reg, dsrLoan(income,rate,stress,term));
-    var capped70 = l70>cap, capped40 = l40>cap;
+    var capped70 = (l70 - bangongje()) > cap, capped40 = (l40 - bangongje()) > cap;
     var firstCls = state.first? 'first':'';
     var c70 = state.first? (capped70?'cap':'first') : (capped70?'cap':'');
     var c40 = !state.first? (capped40?'cap':'first') : (capped40?'cap':'');
     return '<td>'+fmt(price)+'</td>'+
       '<td class="deposit">'+fmt(price*0.10)+'</td>'+
-      '<td class="'+c70+'">'+fmt(Math.min(l70,cap))+(capped70?'<span class="capflag">상한</span>':'')+'</td>'+
-      '<td class="'+c40+'">'+fmt(Math.min(l40,cap))+(capped40?'<span class="capflag">상한</span>':'')+'</td>'+
+      '<td class="'+c70+'">'+fmt(Math.min(Math.max(0, l70 - bangongje()),cap))+(capped70?'<span class="capflag">상한</span>':'')+'</td>'+
+      '<td class="'+c40+'">'+fmt(Math.min(Math.max(0, l40 - bangongje()),cap))+(capped40?'<span class="capflag">상한</span>':'')+'</td>'+
       '<td>'+(cap===Infinity?'없음':fmt(cap))+'</td>'+
       '<td style="font-weight:700;color:var(--brand-d)">'+fmt(actual)+'</td>';
   }
@@ -595,6 +610,8 @@
     $(id).addEventListener('change', refresh);
   });
   $('small85').addEventListener('change', refresh);
+  $('mci').addEventListener('change', refresh);
+  $('bangRegion').addEventListener('change', refresh);
 
   // 생애최초 세그먼트 + 조건부 확인 모달
   var seg = $('segFirst');
